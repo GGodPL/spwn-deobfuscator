@@ -1,12 +1,13 @@
+CONSTANT = "YQYgYwZAZQZgZwaAaQagawbAbQbgbwcAcQcgcwdAdQdgdweAeQegQQQgQwRARQRgRwSASQSgSwTATQTgTwUAUQUgUwVAVQVgVwWAWQWgMQMgMwNANQNgNwOAOQMAXwLQKwPQPAPgewfQKAKQWwXQOgOwIQQAIwJAJQXgJgfAKgIgJwXALgLALwIACg"
+naming = @array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_")
+alpha = @array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+symbols = @array("-+=<>{}()[]:;!@#$%^&|*\"'\\.,/")
+whitespace = @array(" \t\n")
+d = (num) {
+    return $.b64decode(CONSTANT[num * 2] + CONSTANT[num * 2 + 1])
+}
 deobfuscate = (inp: @string, change_variable_names: @bool = true, remove_comments: @bool = true) {
-    CONSTANT = "YQYgYwZAZQZgZwaAaQagawbAbQbgbwcAcQcgcwdAdQdgdweAeQegQQQgQwRARQRgRwSASQSgSwTATQTgTwUAUQUgUwVAVQVgVwWAWQWgMQMgMwNANQNgNwOAOQMAXwLQKwPQPAPgewfQKAKQWwXQOgOwIQQAIwJAJQXgJgfAKgIgJwXALgLALwIACg"
-    naming = @array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_")
-    alpha = @array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-    symbols = @array("-+=<>{}()[]:;!@#$%^&|*\"'\\.,/")
-    whitespace = @array(" \t\n")
-    d = (num) {
-        return $.b64decode(CONSTANT[num * 2] + CONSTANT[num * 2 + 1])
-    }
+    
     let input = inp.split(";")
     let c = $.b64decode($.b64decode(input[3].substr(input[3].index("\"") + 1, input[3].length - 2)))
     let output_stack = []
