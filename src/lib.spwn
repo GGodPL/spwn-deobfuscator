@@ -1,0 +1,168 @@
+deobfuscate = (inp: @string, change_variable_names: @bool = true, remove_comments: @bool = true) {
+    CONSTANT = "YQYgYwZAZQZgZwaAaQagawbAbQbgbwcAcQcgcwdAdQdgdweAeQegQQQgQwRARQRgRwSASQSgSwTATQTgTwUAUQUgUwVAVQVgVwWAWQWgMQMgMwNANQNgNwOAOQMAXwLQKwPQPAPgewfQKAKQWwXQOgOwIQQAIwJAJQXgJgfAKgIgJwXALgLALwIACg"
+    naming = @array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_")
+    alpha = @array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    symbols = @array("-+=<>{}()[]:;!@#$%^&|*\"'\\.,/")
+    whitespace = @array(" \t\n")
+    d = (num) {
+        return $.b64decode(CONSTANT[num * 2] + CONSTANT[num * 2 + 1])
+    }
+    let input = inp.split(";")
+    let c = $.b64decode($.b64decode(input[3].substr(input[3].index("\"") + 1, input[3].length - 2)))
+    let output_stack = []
+    for i in 0..$.floor(c.length / 2 + 1) {
+        if (c.length / 2 <= i) {break}
+        output_stack.push(d(CONSTANT.index(c[i * 2] + c[i * 2 + 1]) / 2))
+    }
+    output_stack = output_stack.join("").split("\n")
+    let output = [] 
+    if (remove_comments) {
+        for i in 0..output_stack.length {
+            let line = output_stack[i]
+            if (line.contains("/*")) {
+                let in_string = false
+                let in_comment = false
+                let comment_start = 0
+                let line_no_comment = line
+                for i_ in 0..line.length {
+                    let char = line[i_]
+                    if (char in "'\"") {in_string = !in_string}
+                    if (in_string) {continue}
+                    if (in_comment && char == "*" && line[i_ + 1] == "/") {in_comment = false; line_no_comment = line.substr(0, comment_start) + line.substr(i_ + 2, line.length)}
+                    else if (char == "/" && line[i_ + 1] == "*") {in_comment = true; comment_start = i_}
+                }
+                output.push(line_no_comment + "\n")
+            } else {
+                output.push(output_stack[i] + "\n")
+            }
+        }
+    } else {
+        for i in 0..output_stack.length {
+            output.push(output_stack[i] + "\n")
+        }
+    }
+    output = output.join("")
+    // Code from itsmebombie/spwn-obfuscator
+    if change_variable_names {
+        let variables = []
+        for i in 0..output.length {
+            _char = output[i]
+
+            let in_string = false
+            let in_comment = false
+            let last_char_was_slash = false
+            let last_char_was_backslash = false
+            let token_before_equals = ""
+            
+            match _char {
+                in "\"'": (){
+                    if in_comment {return}
+                    if last_char_was_backslash {last_char_was_backslash = false; return}
+
+                    in_string = !in_string
+                }(),
+                =="\n": (){
+                    in_string = false
+                    in_comment = false
+                    last_char_was_slash = false
+                    last_char_was_backslash = false
+                }(),
+                =="\\": (){
+                    if last_char_was_backslash {last_char_was_backslash = false; return}
+                    
+                    last_char_was_backslash = true
+                }(),
+                =="/": (){
+                    if last_char_was_slash {
+                        in_comment = !in_comment
+                        return
+                    }
+                    
+                    last_char_was_slash = true
+                }(),
+                =="=": (){
+                    last_char_was_slash = false
+
+                    if in_string {return}
+                    if in_comment {return}
+                    if last_char_was_backslash {last_char_was_backslash = false; return}
+
+                    last_char_was_backslash = false
+
+                    let j = i
+
+                    if !(output[j+1] in naming+@array(" \t\"'!([{@$-+")) {return}
+                    
+                    while true {
+                        if j == 0 {break}
+                        j--
+                        
+                        if output[j] == "@" {token_before_equals = ""; break}
+                        if !(output[j] in naming+@array(" \t")) {break}
+                        if token_before_equals != "" && output[j] in " \t" {break}
+
+                        if output[j] in naming {
+                            token_before_equals += output[j]
+                        }
+                    }
+                    token_before_equals = token_before_equals.reverse()
+                    if token_before_equals.length == 0 {return}
+                    if !(token_before_equals[0] in alpha) {token_before_equals = ""; return}
+                    if variables.index(token_before_equals) == null {variables.push(token_before_equals)}
+                }(),
+                else: (){
+                    last_char_was_slash = false
+                    last_char_was_backslash = false
+                }(),
+            }
+        }
+
+        lexer = (string) {
+            let tokens = []
+            let context = []
+            
+            for char in 0..string.length {
+                if string[char] in naming {
+                    if char <= string.length && string[char] in naming {
+                        context.push(string[char])
+                    } 
+                    if char + 1 == string.length || !(string[char + 1] in naming) {
+                        tokens.push(context.join(""))
+                        context = []
+                    }
+                } else if string[char] in whitespace {
+                    if char == "\t" {
+                        tokens.push("    ")
+                    } else {
+                        tokens.push(string[char])
+                    }
+                } else if string[char] in symbols {
+                    if char <= string.length && string[char] in symbols {
+                        tokens.push(string[char])
+                    } 
+                } 
+            }
+            return tokens
+        }
+
+        let tokens = lexer(output)
+        let variables_used = {}
+        let in_string = false
+        let last_string_char = ""
+        for token in 0..tokens.length {
+            if tokens[token] in "\"'" && (last_string_char == "" || last_string_char == tokens[token]) && (tokens[token - 1] != "\\" || tokens[token - 2] == "\\") { in_string = !in_string; last_string_char = "" if last_string_char != "" else tokens[token] }
+            if in_string {continue}
+            if !(tokens[token] in variables) {continue}
+            
+            if tokens[token] in variables_used.keys() == false {
+                variables_used.set(tokens[token], "__var_{}".fmt(variables.index(tokens[token])))
+            }
+            tokens[token] = variables_used.get(tokens[token])
+        }
+        
+        output = tokens.join("")
+    } 
+    return output
+}
+
+return {deobfuscate: deobfuscate}
