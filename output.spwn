@@ -1,0 +1,2 @@
+__var_0 = 'hello'
+$.print(__var_0)
